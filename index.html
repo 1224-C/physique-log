@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#d5202a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="トレ記録">
+<title>トレ記録｜PHYSIQUE</title>
+<style>
+  :root{ --red:#d5202a; --dark:#1b2531; --bg:#f4f2f0; --line:#e3ded9; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
+        background:var(--bg); color:#1b1f24; }
+  header{ background:var(--dark); color:#fff; padding:14px 16px; position:sticky; top:0; z-index:5; }
+  header h1{ margin:0; font-size:18px; letter-spacing:1px; }
+  header .sub{ font-size:11px; color:#cdd3da; margin-top:2px; }
+  .wrap{ max-width:560px; margin:0 auto; padding:14px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+  .card h2{ font-size:13px; margin:0 0 10px; color:var(--red); letter-spacing:.5px; }
+
+  .rote{ background:var(--dark); color:#fff; border-radius:10px; padding:10px 12px; margin-bottom:10px;
+    font-weight:800; font-size:15px; text-align:center; letter-spacing:1px; }
+  .rote small{ display:block; font-weight:500; font-size:10px; color:#cdd3da; letter-spacing:0; margin-top:2px; }
+
+  .prog details{ border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; }
+  .prog summary{ background:#f7f5f3; padding:10px 12px; font-weight:800; font-size:14px; cursor:pointer;
+    list-style:none; display:flex; justify-content:space-between; align-items:center; }
+  .prog summary::-webkit-details-marker{ display:none; }
+  .prog summary .note{ font-weight:500; font-size:10px; color:#888; }
+  .prog ol{ margin:0; padding:8px 12px 12px 30px; }
+  .prog ol li{ font-size:12.5px; margin:5px 0; }
+  .prog ol li .tg{ color:var(--red); font-weight:700; font-size:11px; margin-left:4px; }
+
+  label{ display:block; font-size:11px; color:#666; margin:0 0 4px; }
+  select,input[type=date]{ width:100%; padding:12px; font-size:16px; border:1px solid var(--line);
+    border-radius:10px; background:#fff; color:#1b1f24; }
+  .row{ display:flex; gap:10px; margin-bottom:12px; }
+  .row>div{ flex:1; }
+
+  .exwrap{ display:flex; flex-direction:column; gap:10px; }
+  .ex{ border:1px solid var(--line); border-radius:12px; padding:12px; background:#fff; }
+  .ex.done{ border-color:#cfe6d3; background:#f6fbf7; }
+  .ex .top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .ex .nm{ font-weight:800; font-size:15px; }
+  .ex .tg{ font-size:11px; color:var(--red); font-weight:700; white-space:nowrap; }
+  .ex .pick{ margin:8px 0 4px; }
+  .ex .pick select{ padding:9px 10px; font-size:14px; font-weight:700; }
+  .ex .last{ font-size:11px; color:#888; margin:6px 0 8px; }
+  .ctrls{ display:flex; gap:8px; align-items:flex-end; }
+  .fld{ flex:1; }
+  .fld label{ text-align:center; }
+  .stepper{ display:flex; gap:6px; }
+  .stepper button{ width:42px; font-size:22px; font-weight:800; border:none; border-radius:9px;
+    background:var(--dark); color:#fff; }
+  .stepper button:active{ background:#333f4f; }
+  .stepper input{ width:100%; text-align:center; font-size:20px; font-weight:800; padding:9px 2px;
+    border:1px solid var(--line); border-radius:9px; }
+  .recbtn{ flex:0 0 78px; padding:12px 0; font-size:15px; font-weight:800; color:#fff; background:var(--red);
+    border:none; border-radius:10px; }
+  .recbtn:active{ background:#a81820; }
+  .total{ margin-top:10px; font-size:13px; font-weight:800; color:#1b2531; }
+  .total span{ color:var(--red); }
+  .todaysets{ margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ background:#eef0f2; border-radius:20px; padding:4px 10px; font-size:12px; font-weight:700; }
+  .chip .x{ color:#bbb; margin-left:6px; }
+
+  details.hist{ border-top:1px solid var(--line); padding:8px 0; }
+  details.hist summary{ font-size:14px; font-weight:700; cursor:pointer; list-style:none; padding:4px 0;
+    display:flex; justify-content:space-between; }
+  details.hist summary::-webkit-details-marker{ display:none; }
+  details.hist .h{ font-size:12px; color:#666; padding:6px 0; }
+  .cnt{ font-size:11px; color:#888; }
+  .empty{ color:#aaa; font-size:13px; text-align:center; padding:14px 0; }
+
+  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; }
+  .toolbar button{ flex:1; min-width:120px; padding:11px; font-size:12px; border-radius:10px;
+    border:1px solid var(--line); background:#fff; color:#333; font-weight:700; }
+  .toolbar .danger{ color:var(--red); border-color:#f1c2c6; }
+  .hint{ font-size:11px; color:#888; line-height:1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>PHYSIQUE 記録</h1>
+  <div class="sub">日を選ぶ → 種目順に並ぶ → 段ごとに「記録」（ピラミッド/ドロップOK）</div>
+</header>
+
+<div class="wrap">
+
+  <div class="card prog">
+    <div class="rote">胸 → 背中 → 肩 → 足<small>この順番でローテーション</small></div>
+    <h2>規定メニュー（この順番でやる）</h2>
+    <div id="program"></div>
+  </div>
+
+  <div class="card">
+    <h2>今日のトレ</h2>
+    <div class="row">
+      <div>
+        <label>日付</label>
+        <input type="date" id="date">
+      </div>
+      <div>
+        <label>今日やる日</label>
+        <select id="day"></select>
+      </div>
+    </div>
+    <div id="exarea" class="exwrap"></div>
+  </div>
+
+  <div class="card">
+    <h2>種目別 履歴</h2>
+    <div id="history"></div>
+  </div>
+
+  <div class="card">
+    <h2>データ</h2>
+    <div class="toolbar">
+      <button onclick="exportCSV()">CSV書き出し</button>
+      <button onclick="exportJSON()">バックアップ(JSON)</button>
+      <button onclick="document.getElementById('imp').click()">復元(JSON読込)</button>
+      <button class="danger" onclick="wipe()">全消去</button>
+    </div>
+    <input type="file" id="imp" accept="application/json" style="display:none" onchange="importJSON(event)">
+    <div class="hint" style="margin-top:10px">
+      記録はこの端末のこのブラウザに自動保存（ネット不要・オフラインOK）。<br>
+      ・別端末／別ブラウザでは別データ　・たまに「バックアップ(JSON)」で書き出すと安心
+    </div>
+  </div>
+
+</div>
+
+<script>
+const KEY='physique_log_v2';
+
+const PROGRAM = [
+  {day:'胸の日', note:'上部メイン／フラットは脇役', items:[
+    {label:'インクラインプレス',  target:'3〜4 × 8〜12'},
+    {label:'フラット系',          target:'3 × 8〜12',  options:['フラットベンチ','ディップス']},
+    {label:'フライ',              target:'3 × 12〜15', options:['ケーブルフライ','インクラインフライ']},
+    {label:'サイドレイズ(散らし)',target:'25回'},
+  ]},
+  {day:'背中の日', note:'広がり優先／締めは懸垂', items:[
+    {label:'ラットプルダウン',    target:'3〜4 × 8〜12'},
+    {label:'ロー',                target:'3 × 10〜12', options:['ワンハンドロー','マシンロー']},
+    {label:'リア',                target:'50回',       options:['フェイスプル','リバースフライ']},
+    {label:'サイドレイズ(散らし)',target:'25回'},
+    {label:'懸垂(バーンアウト)',  target:'1〜2set 限界'},
+  ]},
+  {day:'肩の日(＋腕)', note:'サイド主役＋腕仕上げ', items:[
+    {label:'サイドレイズ(立ち)',  target:'50回'},
+    {label:'サイドレイズ(座り)',  target:'50回'},
+    {label:'マシンサイドレイズ',  target:'50回'},
+    {label:'リア',                target:'50回',       options:['リアレイズ','フェイスプル']},
+    {label:'三頭',                target:'3 × 10〜12', options:['三頭プレスダウン','三頭オーバーヘッド']},
+    {label:'二頭',                target:'3 × 10〜12', options:['二頭カール','二頭ケーブル']},
+  ]},
+  {day:'足の日', note:'最低限・カーフ優先', items:[
+    {label:'脚プレス系',          target:'3 × 10〜12', options:['レッグプレス','スクワット']},
+    {label:'ハム',                target:'3 × 10〜12', options:['レッグカール','ルーマニアンDL']},
+    {label:'カーフレイズ',        target:'3〜4 × 15'},
+  ]},
+];
+
+let data = load();
+let choice = {};
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ return []; } }
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
+function todayStr(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function lastSession(ex){ // 同じ種目の「前回やった日」のセット一覧
+  const a=data.filter(d=>d.exercise===ex); if(!a.length) return null;
+  const last=a[a.length-1].date;
+  return { date:last, sets:a.filter(d=>d.date===last) };
+}
+function lastEntry(ex){ const a=data.filter(d=>d.exercise===ex); return a.length? a[a.length-1]:null; }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function dispName(it){ return it.options ? it.options.join(' / ') : it.label; }
+function currentName(it,key){
+  if(!it.options) return it.label;
+  if(choice[key] && it.options.includes(choice[key])) return choice[key];
+  let best=null, bestT='';
+  it.options.forEach(o=>{ const l=lastEntry(o); if(l && l.date>=bestT){ bestT=l.date; best=o; } });
+  return best || it.options[0];
+}
+
+function renderProgram(){
+  const box=document.getElementById('program'); box.innerHTML='';
+  PROGRAM.forEach((d,i)=>{
+    const det=document.createElement('details'); if(i===0) det.open=true;
+    const li=d.items.map(it=>`<li>${esc(dispName(it))}<span class="tg">${esc(it.target)}</span></li>`).join('');
+    det.innerHTML=`<summary><span>${esc(d.day)}</span><span class="note">${esc(d.note)}</span></summary><ol>${li}</ol>`;
+    box.appendChild(det);
+  });
+}
+
+function buildDaySelect(){
+  const sel=document.getElementById('day');
+  PROGRAM.forEach((d,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=d.day; sel.appendChild(o); });
+}
+
+function renderDay(){
+  const di=+document.getElementById('day').value;
+  const date=document.getElementById('date').value;
+  const area=document.getElementById('exarea'); area.innerHTML='';
+  PROGRAM[di].items.forEach((it,idx)=>{
+    const key=di+'-'+idx;
+    const ex=currentName(it,key);
+    const sets=data.filter(x=>x.date===date && x.exercise===ex);
+    const ls=lastSession(ex);
+    const seed = ls? ls.sets[ls.sets.length-1] : null;
+    const w=seed? seed.weight:20, r=seed? seed.reps:10;
+
+    const card=document.createElement('div');
+    card.className='ex'+(sets.length?' done':'');
+
+    let pickHTML='';
+    if(it.options){
+      const opts=it.options.map(o=>`<option value="${esc(o)}" ${o===ex?'selected':''}>${esc(o)}</option>`).join('');
+      pickHTML=`<div class="pick"><select class="exsel">${opts}</select></div>`;
+    }
+
+    // 前回サマリ（前回の合計回数を表示）
+    let lastTxt='初記録';
+    if(ls){ const tot=ls.sets.reduce((s,x)=>s+x.reps,0); lastTxt=`前回(${ls.date})：${ls.sets.length}段・合計${tot}回`; }
+
+    card.innerHTML=`
+      <div class="top"><span class="nm">${idx+1}. ${esc(it.label)}</span><span class="tg">目標 ${esc(it.target)}</span></div>
+      ${pickHTML}
+      <div class="last">${lastTxt}</div>
+      <div class="ctrls">
+        <div class="fld"><label>重量kg</label>
+          <div class="stepper">
+            <button type="button" data-a="w" data-d="-2.5">−</button>
+            <input type="number" class="w" inputmode="decimal" step="2.5" value="${w}">
+            <button type="button" data-a="w" data-d="2.5">＋</button>
+          </div>
+        </div>
+        <div class="fld"><label>回数</label>
+          <div class="stepper">
+            <button type="button" data-a="r" data-d="-1">−</button>
+            <input type="number" class="r" inputmode="numeric" step="1" value="${r}">
+            <button type="button" data-a="r" data-d="1">＋</button>
+          </div>
+        </div>
+        <button type="button" class="recbtn">記録</button>
+      </div>
+      <div class="total"></div>
+      <div class="todaysets"></div>
+    `;
+
+    const selEl=card.querySelector('.exsel');
+    if(selEl){ selEl.onchange=()=>{ choice[key]=selEl.value; renderDay(); }; }
+
+    card.querySelectorAll('button[data-a]').forEach(b=>{
+      b.onclick=()=>{
+        const inp=card.querySelector(b.dataset.a==='w'?'.w':'.r');
+        let v=parseFloat(inp.value)||0; v=Math.max(0,Math.round((v+parseFloat(b.dataset.d))*10)/10);
+        inp.value=(b.dataset.a==='r')?Math.round(v):v;
+      };
+    });
+
+    card.querySelector('.recbtn').onclick=()=>{
+      const weight=parseFloat(card.querySelector('.w').value)||0;
+      const reps=parseInt(card.querySelector('.r').value)||0;
+      data.push({ id:Date.now()+''+Math.floor(Math.random()*1000), date, exercise:ex, weight, reps });
+      save(); if(navigator.vibrate) navigator.vibrate(30);
+      renderDay(); renderHistory();
+    };
+
+    // 合計（トータル）表示
+    const totBox=card.querySelector('.total');
+    if(sets.length){
+      const totReps=sets.reduce((s,x)=>s+x.reps,0);
+      const vol=sets.reduce((s,x)=>s+x.weight*x.reps,0);
+      totBox.innerHTML=`今日の合計：<span>${totReps}回</span>（${sets.length}段・${vol.toLocaleString()}kg）`;
+    }
+
+    const ts=card.querySelector('.todaysets');
+    sets.forEach((s,i)=>{
+      const c=document.createElement('span'); c.className='chip';
+      c.innerHTML=`${i+1}段 ${s.weight}×${s.reps}<span class="x">✕</span>`;
+      c.querySelector('.x').onclick=()=>{ data=data.filter(d=>d.id!==s.id); save(); renderDay(); renderHistory(); };
+      ts.appendChild(c);
+    });
+
+    area.appendChild(card);
+  });
+}
+
+function renderHistory(){
+  const box=document.getElementById('history'); box.innerHTML='';
+  const exs=[...new Set(data.map(d=>d.exercise))];
+  if(!exs.length){ box.innerHTML='<div class="empty">まだ履歴なし</div>'; return; }
+  exs.forEach(ex=>{
+    const arr=data.filter(d=>d.exercise===ex);
+    const best=Math.max(...arr.map(d=>d.weight));
+    // 日付ごとにまとめる
+    const byDate={};
+    arr.forEach(d=>{ (byDate[d.date]=byDate[d.date]||[]).push(d); });
+    const dates=Object.keys(byDate).sort().reverse();
+    const det=document.createElement('details'); det.className='hist';
+    det.innerHTML=`<summary><span>${esc(ex)}</span><span class="cnt">最高 ${best}kg ・ ${dates.length}日</span></summary>`;
+    dates.slice(0,30).forEach(dt=>{
+      const sets=byDate[dt]; const tot=sets.reduce((s,x)=>s+x.reps,0);
+      const detail=sets.map(s=>`${s.weight}×${s.reps}`).join(' / ');
+      const h=document.createElement('div'); h.className='h';
+      h.textContent=`${dt}　合計${tot}回（${detail}）`;
+      det.appendChild(h);
+    });
+    box.appendChild(det);
+  });
+}
+
+function exportCSV(){
+  if(!data.length){ alert('データがありません'); return; }
+  const rows=[['日付','種目','重量kg','回数']].concat(data.map(d=>[d.date,d.exercise,d.weight,d.reps]));
+  const csv='﻿'+rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  dl(new Blob([csv],{type:'text/csv'}),`トレ記録_${todayStr()}.csv`);
+}
+function exportJSON(){ dl(new Blob([JSON.stringify(data)],{type:'application/json'}),`トレ記録_backup_${todayStr()}.json`); }
+function dl(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); }
+function importJSON(e){
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ const arr=JSON.parse(r.result);
+    if(Array.isArray(arr)){ if(confirm('現在のデータに追加読み込みします。よろしいですか？')){ data=data.concat(arr); save(); renderAll(); alert('読み込み完了'); } }
+    else alert('形式が違います'); }catch(err){ alert('読み込み失敗'); } };
+  r.readAsText(f); e.target.value='';
+}
+function wipe(){ if(confirm('全データを消去します。元に戻せません。よろしいですか？')){ data=[]; save(); renderAll(); } }
+
+function renderAll(){ renderDay(); renderHistory(); }
+
+renderProgram();
+buildDaySelect();
+document.getElementById('date').value=todayStr();
+document.getElementById('day').addEventListener('change',renderDay);
+document.getElementById('date').addEventListener('change',renderDay);
+renderAll();
+
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+</script>
+</body>
+</html>
