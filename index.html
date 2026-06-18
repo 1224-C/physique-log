@@ -73,6 +73,9 @@
     display:flex; justify-content:space-between; }
   details.hist summary::-webkit-details-marker{ display:none; }
   details.hist .h{ font-size:12px; color:#666; padding:6px 0; }
+  .grouphead{ font-size:12px; font-weight:800; color:#fff; background:var(--dark);
+    padding:6px 11px; border-radius:8px; margin:14px 0 8px; letter-spacing:.5px; }
+  .grouphead:first-child{ margin-top:0; }
   .cnt{ font-size:11px; color:#888; }
   .empty{ color:#aaa; font-size:13px; text-align:center; padding:14px 0; }
 
@@ -293,27 +296,44 @@ function renderDay(){
   });
 }
 
+// 種目→部位（PROGRAMの日）の対応表。最初に出てきた日に割り当て
+function bodyPartMap(){
+  const m={};
+  PROGRAM.forEach(d=>d.items.forEach(it=>{
+    (it.options||[it.label]).forEach(n=>{ if(!(n in m)) m[n]=d.day; });
+  }));
+  return m;
+}
+function buildExDetails(ex){
+  const arr=data.filter(d=>d.exercise===ex);
+  const best=Math.max(...arr.map(d=>d.weight));
+  const byDate={};
+  arr.forEach(d=>{ (byDate[d.date]=byDate[d.date]||[]).push(d); });
+  const dates=Object.keys(byDate).sort().reverse();
+  const det=document.createElement('details'); det.className='hist';
+  det.innerHTML=`<summary><span>${esc(ex)}</span><span class="cnt">最高 ${best}kg ・ ${dates.length}日</span></summary>`;
+  dates.slice(0,30).forEach(dt=>{
+    const sets=byDate[dt]; const tot=sets.reduce((s,x)=>s+x.reps,0);
+    const detail=sets.map(s=>`${s.weight}×${s.reps}`).join(' / ');
+    const h=document.createElement('div'); h.className='h';
+    h.textContent=`${dt}　合計${tot}回（${detail}）`;
+    det.appendChild(h);
+  });
+  return det;
+}
 function renderHistory(){
   const box=document.getElementById('history'); box.innerHTML='';
-  const exs=[...new Set(data.map(d=>d.exercise))];
-  if(!exs.length){ box.innerHTML='<div class="empty">まだ履歴なし</div>'; return; }
-  exs.forEach(ex=>{
-    const arr=data.filter(d=>d.exercise===ex);
-    const best=Math.max(...arr.map(d=>d.weight));
-    // 日付ごとにまとめる
-    const byDate={};
-    arr.forEach(d=>{ (byDate[d.date]=byDate[d.date]||[]).push(d); });
-    const dates=Object.keys(byDate).sort().reverse();
-    const det=document.createElement('details'); det.className='hist';
-    det.innerHTML=`<summary><span>${esc(ex)}</span><span class="cnt">最高 ${best}kg ・ ${dates.length}日</span></summary>`;
-    dates.slice(0,30).forEach(dt=>{
-      const sets=byDate[dt]; const tot=sets.reduce((s,x)=>s+x.reps,0);
-      const detail=sets.map(s=>`${s.weight}×${s.reps}`).join(' / ');
-      const h=document.createElement('div'); h.className='h';
-      h.textContent=`${dt}　合計${tot}回（${detail}）`;
-      det.appendChild(h);
-    });
-    box.appendChild(det);
+  if(!data.length){ box.innerHTML='<div class="empty">まだ履歴なし</div>'; return; }
+  const pmap=bodyPartMap();
+  const used=[...new Set(data.map(d=>d.exercise))];
+  const order=PROGRAM.map(d=>d.day);
+  const groups={}; order.forEach(g=>groups[g]=[]); groups['その他']=[];
+  used.forEach(ex=>{ const g=pmap[ex]||'その他'; groups[g].push(ex); });
+  [...order,'その他'].forEach(g=>{
+    const exs=groups[g]; if(!exs.length) return;
+    const head=document.createElement('div'); head.className='grouphead'; head.textContent=g;
+    box.appendChild(head);
+    exs.forEach(ex=>box.appendChild(buildExDetails(ex)));
   });
 }
 
