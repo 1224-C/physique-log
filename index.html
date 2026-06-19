@@ -67,6 +67,11 @@
   .todaysets{ margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
   .chip{ background:#eef0f2; border-radius:20px; padding:4px 10px; font-size:12px; font-weight:700; }
   .chip .x{ color:#bbb; margin-left:6px; }
+  .subhead{ font-size:12px; font-weight:800; color:#a81820; background:#fbeaec; border:1px solid #f1c2c6;
+    padding:7px 11px; border-radius:8px; margin:6px 0 2px; }
+  .addbox{ margin-top:8px; }
+  .exdelwrap{ text-align:right; }
+  .exdel{ margin-top:8px; background:none; border:none; color:#c0392b; font-size:11px; font-weight:700; text-decoration:underline; }
 
   details.hist{ border-top:1px solid var(--line); padding:8px 0; }
   details.hist summary{ font-size:14px; font-weight:700; cursor:pointer; list-style:none; padding:4px 0;
@@ -171,6 +176,7 @@ const PROGRAM = [
 
 let data = load();
 let choice = {};
+let addedExtras = {}; // date -> [手動で追加した種目名]
 
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ return []; } }
 function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
@@ -207,93 +213,160 @@ function buildDaySelect(){
   PROGRAM.forEach((d,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=d.day; sel.appendChild(o); });
 }
 
+// 全種目を部位ごとにまとめて返す（追加ピッカー用・重複排除）
+function allExerciseGroups(){
+  const seen=new Set(); const groups=[];
+  PROGRAM.forEach(d=>{
+    const names=[];
+    d.items.forEach(it=>{ (it.options||[it.label]).forEach(n=>{ if(!seen.has(n)){ seen.add(n); names.push(n); } }); });
+    if(names.length) groups.push({day:d.day, names});
+  });
+  return groups;
+}
+// その日に「規定として含まれる」全種目名（候補も含む）
+function prescribedNames(di){
+  const s=new Set();
+  PROGRAM[di].items.forEach(it=>{ (it.options||[it.label]).forEach(n=>s.add(n)); });
+  return s;
+}
+
+// 種目カードを生成（規定・追加 共通）
+function makeCard(cfg, date){
+  const ex = cfg.fixedName ? cfg.fixedName
+           : cfg.options   ? currentName({options:cfg.options}, cfg.key)
+           : cfg.label;
+  const sets=data.filter(x=>x.date===date && x.exercise===ex);
+  const ls=lastSession(ex);
+  const seed = ls? ls.sets[ls.sets.length-1] : null;
+  const w=seed? seed.weight:20, r=seed? seed.reps:10;
+
+  const card=document.createElement('div');
+  card.className='ex'+(sets.length?' done':'');
+
+  let pickHTML='';
+  if(cfg.options){
+    const opts=cfg.options.map(o=>`<option value="${esc(o)}" ${o===ex?'selected':''}>${esc(o)}</option>`).join('');
+    pickHTML=`<div class="pick"><select class="exsel">${opts}</select></div>`;
+  }
+
+  let lastTxt='初記録';
+  if(ls){ const tot=ls.sets.reduce((s,x)=>s+x.reps,0); lastTxt=`前回(${ls.date})：${ls.sets.length}段・合計${tot}回`; }
+
+  const title=(cfg.no?cfg.no+' ':'')+esc(cfg.label);
+  const tg=cfg.target? `<span class="tg">${esc(cfg.target)==='追加'?'追加':'目標 '+esc(cfg.target)}</span>`:'';
+  const delBtn=cfg.fixedName? `<button type="button" class="exdel">この追加種目を削除</button>`:'';
+
+  card.innerHTML=`
+    <div class="top"><span class="nm">${title}</span>${tg}</div>
+    ${pickHTML}
+    <div class="last">${lastTxt}</div>
+    <div class="ctrls">
+      <div class="fld"><label>重量kg</label>
+        <div class="stepper">
+          <button type="button" data-a="w" data-d="-2.5">−</button>
+          <input type="number" class="w" inputmode="decimal" step="2.5" value="${w}">
+          <button type="button" data-a="w" data-d="2.5">＋</button>
+        </div>
+      </div>
+      <div class="fld"><label>回数</label>
+        <div class="stepper">
+          <button type="button" data-a="r" data-d="-1">−</button>
+          <input type="number" class="r" inputmode="numeric" step="1" value="${r}">
+          <button type="button" data-a="r" data-d="1">＋</button>
+        </div>
+      </div>
+      <button type="button" class="recbtn">記録</button>
+    </div>
+    <div class="total"></div>
+    <div class="todaysets"></div>
+    <div class="exdelwrap">${delBtn}</div>
+  `;
+
+  const selEl=card.querySelector('.exsel');
+  if(selEl){ selEl.onchange=()=>{ choice[cfg.key]=selEl.value; renderDay(); }; }
+
+  card.querySelectorAll('button[data-a]').forEach(b=>{
+    b.onclick=()=>{
+      const inp=card.querySelector(b.dataset.a==='w'?'.w':'.r');
+      let v=parseFloat(inp.value)||0; v=Math.max(0,Math.round((v+parseFloat(b.dataset.d))*10)/10);
+      inp.value=(b.dataset.a==='r')?Math.round(v):v;
+    };
+  });
+
+  card.querySelector('.recbtn').onclick=()=>{
+    const weight=parseFloat(card.querySelector('.w').value)||0;
+    const reps=parseInt(card.querySelector('.r').value)||0;
+    data.push({ id:Date.now()+''+Math.floor(Math.random()*1000), date, exercise:ex, weight, reps });
+    save(); if(navigator.vibrate) navigator.vibrate(30);
+    renderDay(); renderHistory();
+  };
+
+  const delEl=card.querySelector('.exdel');
+  if(delEl){ delEl.onclick=()=>{
+    if(sets.length && !confirm(`「${ex}」の今日の記録も消して、この追加種目を外しますか？`)) return;
+    data=data.filter(d=>!(d.date===date && d.exercise===ex));
+    if(addedExtras[date]) addedExtras[date]=addedExtras[date].filter(n=>n!==ex);
+    save(); renderDay(); renderHistory();
+  }; }
+
+  const totBox=card.querySelector('.total');
+  if(sets.length){
+    const totReps=sets.reduce((s,x)=>s+x.reps,0);
+    const vol=sets.reduce((s,x)=>s+x.weight*x.reps,0);
+    totBox.innerHTML=`今日の合計：<span>${totReps}回</span>（${sets.length}段・${vol.toLocaleString()}kg）`;
+  }
+
+  const ts=card.querySelector('.todaysets');
+  sets.forEach((s,i)=>{
+    const c=document.createElement('span'); c.className='chip';
+    c.innerHTML=`${i+1}段 ${s.weight}×${s.reps}<span class="x">✕</span>`;
+    c.querySelector('.x').onclick=()=>{ data=data.filter(d=>d.id!==s.id); save(); renderDay(); renderHistory(); };
+    ts.appendChild(c);
+  });
+
+  return card;
+}
+
 function renderDay(){
   const di=+document.getElementById('day').value;
   const date=document.getElementById('date').value;
   const area=document.getElementById('exarea'); area.innerHTML='';
+
+  // 規定の種目（順番通り）
   PROGRAM[di].items.forEach((it,idx)=>{
-    const key=di+'-'+idx;
-    const ex=currentName(it,key);
-    const sets=data.filter(x=>x.date===date && x.exercise===ex);
-    const ls=lastSession(ex);
-    const seed = ls? ls.sets[ls.sets.length-1] : null;
-    const w=seed? seed.weight:20, r=seed? seed.reps:10;
-
-    const card=document.createElement('div');
-    card.className='ex'+(sets.length?' done':'');
-
-    let pickHTML='';
-    if(it.options){
-      const opts=it.options.map(o=>`<option value="${esc(o)}" ${o===ex?'selected':''}>${esc(o)}</option>`).join('');
-      pickHTML=`<div class="pick"><select class="exsel">${opts}</select></div>`;
-    }
-
-    // 前回サマリ（前回の合計回数を表示）
-    let lastTxt='初記録';
-    if(ls){ const tot=ls.sets.reduce((s,x)=>s+x.reps,0); lastTxt=`前回(${ls.date})：${ls.sets.length}段・合計${tot}回`; }
-
-    card.innerHTML=`
-      <div class="top"><span class="nm">${idx+1}. ${esc(it.label)}</span><span class="tg">目標 ${esc(it.target)}</span></div>
-      ${pickHTML}
-      <div class="last">${lastTxt}</div>
-      <div class="ctrls">
-        <div class="fld"><label>重量kg</label>
-          <div class="stepper">
-            <button type="button" data-a="w" data-d="-2.5">−</button>
-            <input type="number" class="w" inputmode="decimal" step="2.5" value="${w}">
-            <button type="button" data-a="w" data-d="2.5">＋</button>
-          </div>
-        </div>
-        <div class="fld"><label>回数</label>
-          <div class="stepper">
-            <button type="button" data-a="r" data-d="-1">−</button>
-            <input type="number" class="r" inputmode="numeric" step="1" value="${r}">
-            <button type="button" data-a="r" data-d="1">＋</button>
-          </div>
-        </div>
-        <button type="button" class="recbtn">記録</button>
-      </div>
-      <div class="total"></div>
-      <div class="todaysets"></div>
-    `;
-
-    const selEl=card.querySelector('.exsel');
-    if(selEl){ selEl.onchange=()=>{ choice[key]=selEl.value; renderDay(); }; }
-
-    card.querySelectorAll('button[data-a]').forEach(b=>{
-      b.onclick=()=>{
-        const inp=card.querySelector(b.dataset.a==='w'?'.w':'.r');
-        let v=parseFloat(inp.value)||0; v=Math.max(0,Math.round((v+parseFloat(b.dataset.d))*10)/10);
-        inp.value=(b.dataset.a==='r')?Math.round(v):v;
-      };
-    });
-
-    card.querySelector('.recbtn').onclick=()=>{
-      const weight=parseFloat(card.querySelector('.w').value)||0;
-      const reps=parseInt(card.querySelector('.r').value)||0;
-      data.push({ id:Date.now()+''+Math.floor(Math.random()*1000), date, exercise:ex, weight, reps });
-      save(); if(navigator.vibrate) navigator.vibrate(30);
-      renderDay(); renderHistory();
-    };
-
-    // 合計（トータル）表示
-    const totBox=card.querySelector('.total');
-    if(sets.length){
-      const totReps=sets.reduce((s,x)=>s+x.reps,0);
-      const vol=sets.reduce((s,x)=>s+x.weight*x.reps,0);
-      totBox.innerHTML=`今日の合計：<span>${totReps}回</span>（${sets.length}段・${vol.toLocaleString()}kg）`;
-    }
-
-    const ts=card.querySelector('.todaysets');
-    sets.forEach((s,i)=>{
-      const c=document.createElement('span'); c.className='chip';
-      c.innerHTML=`${i+1}段 ${s.weight}×${s.reps}<span class="x">✕</span>`;
-      c.querySelector('.x').onclick=()=>{ data=data.filter(d=>d.id!==s.id); save(); renderDay(); renderHistory(); };
-      ts.appendChild(c);
-    });
-
-    area.appendChild(card);
+    area.appendChild(makeCard({ no:(idx+1)+'.', label:it.label, target:it.target, options:it.options, key:di+'-'+idx }, date));
   });
+
+  // 追加種目（その日にやった規定外＝サイド/リアの散らし、ノリ等。記録があれば自動で再表示）
+  const pres=prescribedNames(di);
+  const recorded=[...new Set(data.filter(x=>x.date===date && !pres.has(x.exercise)).map(x=>x.exercise))];
+  const manual=(addedExtras[date]||[]).filter(n=>!pres.has(n));
+  const extras=[...new Set([...recorded, ...manual])];
+  if(extras.length){
+    const sh=document.createElement('div'); sh.className='subhead'; sh.textContent='＋ 追加種目（散らし・ノリ）';
+    area.appendChild(sh);
+    extras.forEach(name=>{
+      area.appendChild(makeCard({ label:name, target:'追加', fixedName:name, key:'x-'+name }, date));
+    });
+  }
+
+  // 追加ピッカー
+  const addbox=document.createElement('div'); addbox.className='addbox';
+  let optHTML='<option value="">＋ 他の種目を追加…</option>';
+  allExerciseGroups().forEach(g=>{
+    const names=g.names.filter(n=>!pres.has(n) && !extras.includes(n));
+    if(!names.length) return;
+    optHTML+=`<optgroup label="${esc(g.day)}">`+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')+`</optgroup>`;
+  });
+  optHTML+='<option value="__free">＋ 自由入力</option>';
+  addbox.innerHTML=`<label>他の種目もやった時はここから追加</label><select id="addsel">${optHTML}</select>`;
+  area.appendChild(addbox);
+  addbox.querySelector('#addsel').onchange=function(){
+    let v=this.value; if(!v) return;
+    if(v==='__free'){ const nm=prompt('種目名を入力'); if(!nm){ this.value=''; return; } v=nm; }
+    addedExtras[date]=addedExtras[date]||[]; if(!addedExtras[date].includes(v)) addedExtras[date].push(v);
+    renderDay();
+  };
 }
 
 // 種目→部位（PROGRAMの日）の対応表。最初に出てきた日に割り当て
