@@ -100,7 +100,7 @@
 <div class="wrap">
 
   <div class="card prog">
-    <div class="rote">胸 → 背中 → 肩 → 足<small>この順番でローテーション</small></div>
+    <div class="rote">胸 → 背中 → 足 → 肩<small>この順番でローテ（肩の前に足＝肩をフレッシュで）</small></div>
     <h2>規定メニュー（この順番でやる）</h2>
     <div id="program"></div>
   </div>
@@ -159,6 +159,11 @@ const PROGRAM = [
     {label:'サイドレイズ(散らし)',target:'25回'},
     {label:'懸垂(バーンアウト)',  target:'1〜2set 限界'},
   ]},
+  {day:'足の日', note:'最低限・カーフ優先', items:[
+    {label:'脚プレス系',          target:'3 × 10〜12', options:['レッグプレス','スクワット']},
+    {label:'ハム',                target:'3 × 10〜12', options:['レッグカール','ルーマニアンDL']},
+    {label:'カーフレイズ',        target:'3〜4 × 15'},
+  ]},
   {day:'肩の日(＋腕)', note:'サイド主役＋腕仕上げ', items:[
     {label:'サイドレイズ(立ち)',  target:'50回'},
     {label:'サイドレイズ(座り)',  target:'50回'},
@@ -166,11 +171,6 @@ const PROGRAM = [
     {label:'リア',                target:'50回',       options:['リアレイズ','フェイスプル']},
     {label:'三頭',                target:'3 × 10〜12', options:['三頭プレスダウン','三頭オーバーヘッド']},
     {label:'二頭',                target:'3 × 10〜12', options:['二頭カール','二頭ケーブル']},
-  ]},
-  {day:'足の日', note:'最低限・カーフ優先', items:[
-    {label:'脚プレス系',          target:'3 × 10〜12', options:['レッグプレス','スクワット']},
-    {label:'ハム',                target:'3 × 10〜12', options:['レッグカール','ルーマニアンDL']},
-    {label:'カーフレイズ',        target:'3〜4 × 15'},
   ]},
 ];
 

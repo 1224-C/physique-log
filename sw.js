@@ -1,5 +1,5 @@
 // オフライン対応（アプリ本体をキャッシュ）
-const CACHE = 'physique-v3';
+const CACHE = 'physique-v4';
 const ASSETS = [
   './',
   './index.html',
